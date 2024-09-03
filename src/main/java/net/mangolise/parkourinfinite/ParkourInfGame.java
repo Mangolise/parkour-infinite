@@ -16,8 +16,8 @@ import net.minestom.server.world.DimensionType;
 import java.util.List;
 
 public class ParkourInfGame extends BaseGame<ParkourInfGame.Config> {
-    public ParkourInfGame() {
-        super(new ParkourInfGame.Config());
+    public ParkourInfGame(ParkourInfGame.Config config) {
+        super(config);
     }
 
     @Override
@@ -38,7 +38,9 @@ public class ParkourInfGame extends BaseGame<ParkourInfGame.Config> {
         });
 
         events.addListener(PlayerSpawnEvent.class, e -> {
-            new ParkourInfPlayer(e.getPlayer());
+            if (e.isFirstSpawn()) {
+                config().provider().provide(e.getPlayer());
+            }
         });
 
         Log.logger().info("Started Parkour Infinite game");
@@ -51,5 +53,5 @@ public class ParkourInfGame extends BaseGame<ParkourInfGame.Config> {
         );
     }
 
-    public record Config() { }
+    public record Config(ParkourInfPlayerProvider provider) { }
 }

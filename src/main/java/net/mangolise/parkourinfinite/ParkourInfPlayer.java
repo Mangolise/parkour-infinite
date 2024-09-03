@@ -13,6 +13,7 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.Player;
+import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.EventNode;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.event.player.PlayerEatEvent;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ParkourInfPlayer {
     private static final ItemStack FAILSAFE_ITEM = ItemStack.of(Material.CHICKEN).withCustomName(Component.text("Skip this jump").decoration(TextDecoration.ITALIC, false).color(TextColor.color(143, 176, 79)));
     private static final int FAILSAFE_COUNT = 8;
+    private static final Vec START_POSITION = new Vec(0, 128, 0);
 
     // the blocks deque is an array of blocks ordered newest to oldest
     private final Player player;
@@ -41,26 +43,44 @@ public class ParkourInfPlayer {
     private final Random random;
 
     private double spawnRotation = 0d;
-    private int stepCount = 0;
+    private int stepCount;
     private double lowestBlockY = 30000d;
     private int jumpDeathCount = 0;
 
-    public ParkourInfPlayer(Player player) {
+    public ParkourInfPlayer(Player player, int stepCount) {
         this.player = player;
         this.instance = player.getInstance();
-        this.blocks = new ArrayDeque<>();
+        this.blocks = new ArrayDeque<>(stepCount + 16);
         this.stepTimes = new ArrayDeque<>();
-        this.random = new Random();
+        this.stepCount = stepCount;
 
-        Vec startPos = new Vec(0, 30, 0);
-        blocks.add(new EntityBlock(instance, Block.STONE, startPos, startPos, 0));
+        // generate random seed based on player uuid
+        UUID uuid = player.getUuid();
+        this.random = new Random(uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits());
 
+        // Create blocks player has already stepped on
+        {
+            EntityBlock initialBlock = new EntityBlock(instance, Block.STONE, START_POSITION, START_POSITION, 0);
+            initialBlock.setSteppedOn(stepCount != 0);
+            blocks.add(initialBlock);
+        }
+
+        for (int i = 0; i < stepCount-1; i++) {
+            EntityBlock block = addBlock(blocks.getFirst().getTargetPos());
+            block.setSteppedOn(true);
+            blocks.addFirst(block);
+        }
+
+        Vec spawnPos = blocks.getFirst().getTargetPos().add(0.5, 3, 0.5);
+
+        // Create blocks player hasn't stepped on
         for (int i = 0; i < 3; i++) {
             blocks.addFirst(addBlock(blocks.getFirst().getTargetPos()));
         }
 
+        // Re teleport the player to the spawn, so they don't fall off immediately
         MinecraftServer.getSchedulerManager().scheduleTask(() -> {
-            player.teleport(new Pos(0.5, 34, 0.5, 0, 0));
+            player.teleport(spawnPos.asPosition());
             return TaskSchedule.stop();
         }, TaskSchedule.tick(5));
 
@@ -125,6 +145,7 @@ public class ParkourInfPlayer {
         BoundingBox box = player.getBoundingBox();
         List<EntityBlock> newBlocks = new ArrayList<>();
         boolean stepped = false;
+        Vec steppedPos = null;
 
         synchronized (blocks) {
             for (EntityBlock block : blocks) {
@@ -143,7 +164,8 @@ public class ParkourInfPlayer {
                 }
 
                 if (GameSdkUtils.collidesWithBoundingBox(box, newPos, block.getPosition().add(0, 1, 0))) {
-                    newBlocks.add(addBlock(blocks.getFirst().getTargetPos()));
+                    steppedPos = blocks.getFirst().getTargetPos();
+                    newBlocks.add(addBlock(steppedPos));
                     block.setSteppedOn(true);
                     stepped = true;
                     stepCount++;
@@ -159,6 +181,8 @@ public class ParkourInfPlayer {
                 for (EntityBlock newBlock : newBlocks) {
                     blocks.addFirst(newBlock);
                 }
+
+                EventDispatcher.call(new PlayerStepEvent(player, stepCount, steppedPos, false));
             }
         }
     }
@@ -218,8 +242,11 @@ public class ParkourInfPlayer {
 
         blocks.addFirst(addBlock(blocks.getFirst().getTargetPos()));
         block.setSteppedOn(true);
+        stepCount++;
 
         player.playSound(Sound.sound(SoundEvent.BLOCK_ANVIL_LAND, Sound.Source.PLAYER, 0.4f, 0.5f));
+
+        EventDispatcher.call(new PlayerStepEvent(player, stepCount, block.getTargetPos(), true));
     }
 
     private void onDisconnect(PlayerDisconnectEvent e) {
