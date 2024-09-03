@@ -23,7 +23,7 @@ dependencies {
 tasks.withType<Jar> {
     manifest {
         // Change this to your main class
-        attributes["Main-Class"] = "net.mangolise.parkour-infinite.Test"
+        attributes["Main-Class"] = "net.mangolise.parkourinfinite.Test"
     }
 }
 
@@ -49,14 +49,14 @@ publishing {
     publications {
         create<MavenPublication>("mavenGitCommit") {
             groupId = "net.mangolise"
-            artifactId = "parkour-infinite"
+            artifactId = "parkourinfinite"
             version = versionStr
             from(components["java"])
         }
 
         create<MavenPublication>("mavenLatest") {
             groupId = "net.mangolise"
-            artifactId = "parkour-infinite"
+            artifactId = "parkourinfinite"
             version = "latest"
             from(components["java"])
         }
