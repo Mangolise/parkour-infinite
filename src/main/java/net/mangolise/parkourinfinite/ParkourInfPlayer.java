@@ -25,12 +25,15 @@ import net.minestom.server.inventory.PlayerInventory;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
 import net.minestom.server.sound.SoundEvent;
+import net.minestom.server.tag.Tag;
 import net.minestom.server.timer.TaskSchedule;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ParkourInfPlayer {
+    public static final Tag<ParkourInfPlayer> PLAYER_INF_TAG = Tag.Transient("player_inf_tag");
+
     private static final ItemStack FAILSAFE_ITEM = ItemStack.of(Material.CHICKEN).withCustomName(Component.text("Skip this jump").decoration(TextDecoration.ITALIC, false).color(TextColor.color(143, 176, 79)));
     private static final int FAILSAFE_COUNT = 8;
     private static final Vec START_POSITION = new Vec(0, 128, 0);
@@ -48,6 +51,8 @@ public class ParkourInfPlayer {
     private int jumpDeathCount = 0;
 
     public ParkourInfPlayer(Player player, int stepCount) {
+        player.setTag(PLAYER_INF_TAG, this);
+
         this.player = player;
         this.instance = player.getInstance();
         this.blocks = new ArrayDeque<>(stepCount + 16);
@@ -93,6 +98,10 @@ public class ParkourInfPlayer {
             updateActionBar();
             return TaskSchedule.tick(5);
         }, TaskSchedule.immediate());
+    }
+
+    public int getStepCount() {
+        return stepCount;
     }
 
     private void updateActionBar() {
