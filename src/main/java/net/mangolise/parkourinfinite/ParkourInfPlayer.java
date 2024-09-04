@@ -37,6 +37,7 @@ public class ParkourInfPlayer {
     private static final ItemStack FAILSAFE_ITEM = ItemStack.of(Material.CHICKEN).withCustomName(Component.text("Skip this jump").decoration(TextDecoration.ITALIC, false).color(TextColor.color(143, 176, 79)));
     private static final int FAILSAFE_COUNT = 8;
     private static final Vec START_POSITION = new Vec(0, 128, 0);
+    private static final int LOAD_PLACE_AMOUNT = 32;
 
     // the blocks deque is an array of blocks ordered newest to oldest
     private final Player player;
@@ -64,28 +65,42 @@ public class ParkourInfPlayer {
         this.random = new Random(uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits());
 
         // Create blocks player has already stepped on
-        {
+        Point prevPosition = START_POSITION;
+        if (stepCount <= LOAD_PLACE_AMOUNT) {
             EntityBlock initialBlock = new EntityBlock(instance, Block.STONE, START_POSITION, START_POSITION, 0);
             initialBlock.setSteppedOn(stepCount != 0);
             blocks.add(initialBlock);
         }
 
-        for (int i = 0; i < stepCount-1; i++) {
-            EntityBlock block = addBlock(blocks.getFirst().getTargetPos());
-            block.setSteppedOn(true);
-            blocks.addFirst(block);
+        int skipCount = Math.max(0, stepCount-LOAD_PLACE_AMOUNT);
+        for (int i = 0; i < skipCount; i++) {
+            prevPosition = getNextPosition(prevPosition);
         }
 
-        Vec spawnPos = blocks.getFirst().getTargetPos().add(0.5, 3, 0.5);
+        for (int i = 0; i < stepCount - skipCount - 1; i++) {
+            Point nextPos = getNextPosition(prevPosition);
+            EntityBlock block = createBlock(prevPosition, nextPos);
+            block.setSteppedOn(true);
+            blocks.addFirst(block);
+            prevPosition = nextPos;
+        }
+
+        Vec lastSteppedPos = blocks.getFirst().getTargetPos();
 
         // Create blocks player hasn't stepped on
-        for (int i = 0; i < 3; i++) {
+        EntityBlock firstUnsteppedBlock = addBlock(blocks.getFirst().getTargetPos());
+        blocks.addFirst(firstUnsteppedBlock);
+
+        Pos spawnPos = lastSteppedPos.add(0.5, 3, 0.5).asPosition()
+                .withYaw((float) Math.toDegrees(-firstUnsteppedBlock.getPlaceRotation()));
+
+        for (int i = 0; i < 2; i++) {
             blocks.addFirst(addBlock(blocks.getFirst().getTargetPos()));
         }
 
         // Re teleport the player to the spawn, so they don't fall off immediately
         MinecraftServer.getSchedulerManager().scheduleTask(() -> {
-            player.teleport(spawnPos.asPosition());
+            player.teleport(spawnPos);
             return TaskSchedule.stop();
         }, TaskSchedule.tick(5));
 
@@ -196,7 +211,7 @@ public class ParkourInfPlayer {
         }
     }
 
-    private EntityBlock addBlock(Point previousPos) {
+    private Point getNextPosition(Point previousPos) {
         // generate block position
         Vec offset = new Vec(random.nextGaussian()*0.8d, random.nextGaussian(0d, 0.75d), 0);
         if (offset.y() < 0) offset = offset.withY(y -> y*4);
@@ -214,6 +229,10 @@ public class ParkourInfPlayer {
             lowestBlockY = position.y();
         }
 
+        return position;
+    }
+
+    private EntityBlock createBlock(Point previousPos, Point position) {
         // if they activated failsafe or beat a jump after obtaining failsafe, remove failsafe
         if (jumpDeathCount >= FAILSAFE_COUNT) {
             PlayerInventory inventory = player.getInventory();
@@ -228,6 +247,11 @@ public class ParkourInfPlayer {
         jumpDeathCount = 0;
 
         return new EntityBlock(instance, Block.EMERALD_ORE, previousPos, position, (float) spawnRotation);
+    }
+
+    private EntityBlock addBlock(Point previousPos) {
+        Point position = getNextPosition(previousPos);
+        return createBlock(previousPos, position);
     }
 
     private void onEat(PlayerEatEvent e) {
