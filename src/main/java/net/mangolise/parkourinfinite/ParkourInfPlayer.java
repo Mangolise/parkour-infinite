@@ -51,7 +51,7 @@ public class ParkourInfPlayer {
     private double lowestBlockY = 30000d;
     private int jumpDeathCount = 0;
 
-    public ParkourInfPlayer(Player player, int stepCount) {
+    public ParkourInfPlayer(Player player, int stepCount, long seed) {
         player.setTag(PLAYER_INF_TAG, this);
 
         this.player = player;
@@ -59,10 +59,7 @@ public class ParkourInfPlayer {
         this.blocks = new ArrayDeque<>(stepCount + 16);
         this.stepTimes = new ArrayDeque<>();
         this.stepCount = stepCount;
-
-        // generate random seed based on player uuid
-        UUID uuid = player.getUuid();
-        this.random = new Random(uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits());
+        this.random = new Random(seed);
 
         // Create blocks player has already stepped on
         Point prevPosition = START_POSITION;

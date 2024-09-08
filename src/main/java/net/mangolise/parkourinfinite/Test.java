@@ -38,7 +38,11 @@ public class Test {
 
         server.start("0.0.0.0", GameSdkUtils.getConfiguredPort());
 
-        ParkourInfGame.Config config = new ParkourInfGame.Config(player -> new ParkourInfPlayer(player, scores.get(player.getUuid())));
+        ParkourInfGame.Config config = new ParkourInfGame.Config(player -> {
+            UUID uuid = player.getUuid();
+            long seed = uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits();
+            return new ParkourInfPlayer(player, scores.get(player.getUuid()), seed);
+        });
         ParkourInfGame game = new ParkourInfGame(config);
         game.setup();
     }
