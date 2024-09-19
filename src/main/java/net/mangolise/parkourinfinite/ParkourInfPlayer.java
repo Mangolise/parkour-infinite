@@ -6,7 +6,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.mangolise.gamesdk.log.Log;
-import net.mangolise.gamesdk.util.GameSdkUtils;
+import net.mangolise.parkourinfinite.palette.BlockBox;
+import net.mangolise.parkourinfinite.palette.Palette;
+import net.mangolise.parkourinfinite.palette.Palettes;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.collision.BoundingBox;
 import net.minestom.server.coordinate.Point;
@@ -24,6 +26,8 @@ import net.minestom.server.instance.block.Block;
 import net.minestom.server.inventory.PlayerInventory;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
+import net.minestom.server.network.packet.server.play.ParticlePacket;
+import net.minestom.server.particle.Particle;
 import net.minestom.server.sound.SoundEvent;
 import net.minestom.server.tag.Tag;
 import net.minestom.server.timer.TaskSchedule;
@@ -51,6 +55,8 @@ public class ParkourInfPlayer {
     private double lowestBlockY = 30000d;
     private int jumpDeathCount = 0;
 
+    private Palette palette = Palettes.ores();
+
     public ParkourInfPlayer(Player player, int stepCount, long seed) {
         player.setTag(PLAYER_INF_TAG, this);
 
@@ -62,9 +68,9 @@ public class ParkourInfPlayer {
         this.random = new Random(seed);
 
         // Create blocks player has already stepped on
-        Point prevPosition = START_POSITION;
+        BlockPosition prevPosition = new BlockPosition(START_POSITION, 0, 0);
         if (stepCount <= LOAD_PLACE_AMOUNT) {
-            EntityBlock initialBlock = new EntityBlock(instance, Block.STONE, START_POSITION, START_POSITION, 0);
+            EntityBlock initialBlock = new EntityBlock(instance, Block.STONE, START_POSITION, prevPosition, 0, null);
             initialBlock.setSteppedOn(stepCount != 0);
             blocks.add(initialBlock);
         }
@@ -75,20 +81,20 @@ public class ParkourInfPlayer {
         }
 
         for (int i = 0; i < stepCount - skipCount - 1; i++) {
-            Point nextPos = getNextPosition(prevPosition);
-            EntityBlock block = createBlock(prevPosition, nextPos);
+            BlockPosition nextPos = getNextPosition(prevPosition);
+            EntityBlock block = createBlock(prevPosition.pos(), nextPos);
             block.setSteppedOn(true);
             blocks.addFirst(block);
             prevPosition = nextPos;
         }
 
-        Vec lastSteppedPos = blocks.getFirst().getTargetPos();
+        Point lastSteppedPos = blocks.getFirst().getTargetPos().pos();
 
         // Create blocks player hasn't stepped on
         EntityBlock firstUnsteppedBlock = addBlock(blocks.getFirst().getTargetPos());
         blocks.addFirst(firstUnsteppedBlock);
 
-        Pos spawnPos = lastSteppedPos.add(0.5, 3, 0.5).asPosition()
+        Pos spawnPos = Pos.fromPoint(lastSteppedPos.add(0.5, 3, 0.5))
                 .withYaw((float) Math.toDegrees(-firstUnsteppedBlock.getPlaceRotation()));
 
         for (int i = 0; i < 2; i++) {
@@ -142,13 +148,14 @@ public class ParkourInfPlayer {
             return;
         }
 
+        // Void death
         if (newPos.y() < lowestBlockY - 6d) {
             EntityBlock previous = null;
             for (EntityBlock block : blocks) {
                 if (block.wasSteppedOn()) {
                     double rot = previous != null ? previous.getPlaceRotation() : block.getPlaceRotation();
 
-                    player.teleport(block.getTargetPos().add(0.5, 1, 0.5).asPosition()
+                    player.teleport(Pos.fromPoint(block.getTargetPos().pos().add(0.5, 1, 0.5))
                             .withYaw((float) Math.toDegrees(-rot)));
                     jumpDeathCount++;
 
@@ -166,7 +173,7 @@ public class ParkourInfPlayer {
         BoundingBox box = player.getBoundingBox();
         List<EntityBlock> newBlocks = new ArrayList<>();
         boolean stepped = false;
-        Vec steppedPos = null;
+        BlockPosition steppedPos = null;
 
         synchronized (blocks) {
             for (EntityBlock block : blocks) {
@@ -184,7 +191,8 @@ public class ParkourInfPlayer {
                     continue;
                 }
 
-                if (GameSdkUtils.collidesWithBoundingBox(box, newPos, block.getPosition().add(0, 1, 0))) {
+//                if (GameSdkUtils.collidesWithBoundingBox(box, newPos, block.getPosition().add(0, 1, 0))) {
+                if (isInBlock(newPos, player.getBoundingBox(), block.getTargetPos().pos(), block.getCollision())) {
                     steppedPos = blocks.getFirst().getTargetPos();
                     newBlocks.add(addBlock(steppedPos));
                     block.setSteppedOn(true);
@@ -203,33 +211,90 @@ public class ParkourInfPlayer {
                     blocks.addFirst(newBlock);
                 }
 
-                EventDispatcher.call(new PlayerStepEvent(player, stepCount, steppedPos, false));
+                EventDispatcher.call(new PlayerStepEvent(player, stepCount, Vec.fromPoint(steppedPos.pos()), false));
             }
         }
     }
 
-    private Point getNextPosition(Point previousPos) {
-        // generate block position
-        Vec offset = new Vec(random.nextGaussian()*0.8d, random.nextGaussian(0d, 0.75d), 0);
-        if (offset.y() < 0) offset = offset.withY(y -> y*4);
-        else if (offset.y() > 1d) offset = offset.withY(1d);
+    private boolean isInBlock(Point playerPos, BoundingBox playerBox, Point blockPos, Collection<BoundingBox> collision) {
+        for (BoundingBox box : collision) {
+            if (boundingBoxesCollide(box, playerBox, blockPos, playerPos)) {
+                return true;
+            }
+        }
 
-        offset = offset.withZ((offset.y() + random.nextGaussian()*0.2d) * -0.4d + 4d);
+        return false;
+    }
+
+    private boolean boundingBoxesCollide(BoundingBox box1, BoundingBox box2, Point box1Pos, Point box2Pos) {
+        Point box1Start = box1.relativeStart().add(box1Pos);
+        Point box1End = box1.relativeEnd().add(box1Pos);
+        Point box2Start = box2.relativeStart().add(box2Pos);
+        Point box2End = box2.relativeEnd().add(box2Pos);
+
+        return box2End.x() > box1Start.x() && box2Start.x() < box1End.x() &&
+                box2End.y() > box1Start.y() && box2Start.y() < box1End.y() &&
+                box2End.z() > box1Start.z() && box2Start.z() < box1End.z();
+    }
+
+    private void packetPos(Point pos) {
+        ParticlePacket packet = new ParticlePacket(Particle.DUST, pos.x(), pos.y(), pos.z(), 0, 0, 0, 0, 1);
+        player.sendPacket(packet);
+    }
+
+    private BlockPosition getNextPosition(BlockPosition previousPos) {
+        // generate block type
+        long blockRand = random.nextLong();
+        int blockType = (int) (blockRand & 0xFFL);
+        long passRandom = (blockRand >> 8) & 0xFFFFFFFFL;
+        float distanceAdditional;
+
+        final float[] DISTANCE_MODIFIERS = new float[] {0.3f, -0.1f, -0.2f};
+
+        if (blockType < 154) { // ~60% chance
+            distanceAdditional = 4.0f + DISTANCE_MODIFIERS[0];
+            blockType = 0;
+        } else if (blockType < 230) { // ~30% chance
+            distanceAdditional = 4.0f + DISTANCE_MODIFIERS[1];
+            blockType = 1;
+        } else { // ~10% chance
+            distanceAdditional = 4.0f + DISTANCE_MODIFIERS[2];
+            blockType = 2;
+        }
+
+        distanceAdditional += DISTANCE_MODIFIERS[previousPos.blockType()];
+
+        // generate block position
+        Vec offset = new Vec(random.nextGaussian()*0.6d,
+                random.nextFloat() > 0.650225 ? random.nextGaussian(0.0, 0.75d) : random.nextFloat()
+                , 0);
+        double distanceMultiplier = -0.38d;
+
+        if (offset.y() < 0) offset = offset.withY(y -> y*4);
+        else {
+            if (offset.y() > 1d) {
+                offset = offset.withY(1d);
+            }
+
+            distanceMultiplier = -1.0d;
+        }
+
+        offset = offset.withZ(offset.y() * distanceMultiplier + distanceAdditional);
 
         spawnRotation += random.nextGaussian() / 2d;
         offset = offset.rotateAroundY(spawnRotation);
 
-        Point position = previousPos.add(offset);
+        Point position = previousPos.pos().add(offset);
 
         // update lowest block position and reset jumpDeathCount
         if (position.y() < lowestBlockY) {
             lowestBlockY = position.y();
         }
 
-        return position;
+        return new BlockPosition(position, blockType, passRandom);
     }
 
-    private EntityBlock createBlock(Point previousPos, Point position) {
+    private EntityBlock createBlock(Point previousPos, BlockPosition position) {
         // if they activated failsafe or beat a jump after obtaining failsafe, remove failsafe
         if (jumpDeathCount >= FAILSAFE_COUNT) {
             PlayerInventory inventory = player.getInventory();
@@ -243,12 +308,21 @@ public class ParkourInfPlayer {
 
         jumpDeathCount = 0;
 
-        return new EntityBlock(instance, Block.EMERALD_ORE, previousPos, position, (float) spawnRotation);
+        BlockBox block;
+        if (position.blockType() == 0) { // ~60% chance
+            block = palette.getLargeBlock(position.passRandom());
+        } else if (position.blockType() == 1) { // ~30% chance
+            block = palette.getMediumBlock(position.passRandom());
+        } else { // ~10% chance
+            block = palette.getSmallBlock(position.passRandom());
+        }
+
+        return new EntityBlock(instance, block.block(), previousPos, position, (float) spawnRotation, block.customShape());
     }
 
-    private EntityBlock addBlock(Point previousPos) {
-        Point position = getNextPosition(previousPos);
-        return createBlock(previousPos, position);
+    private EntityBlock addBlock(BlockPosition previousPos) {
+        BlockPosition position = getNextPosition(previousPos);
+        return createBlock(previousPos.pos(), position);
     }
 
     private void onEat(PlayerEatEvent e) {
@@ -268,7 +342,7 @@ public class ParkourInfPlayer {
             return;
         }
 
-        player.teleport(block.getTargetPos().add(0.5, 1, 0.5).asPosition().withView(player.getPosition()));
+        player.teleport(Pos.fromPoint(block.getTargetPos().pos().add(0.5, 1, 0.5)).withView(player.getPosition()));
 
         blocks.addFirst(addBlock(blocks.getFirst().getTargetPos()));
         block.setSteppedOn(true);
@@ -276,7 +350,7 @@ public class ParkourInfPlayer {
 
         player.playSound(Sound.sound(SoundEvent.BLOCK_ANVIL_LAND, Sound.Source.PLAYER, 0.4f, 0.5f));
 
-        EventDispatcher.call(new PlayerStepEvent(player, stepCount, block.getTargetPos(), true));
+        EventDispatcher.call(new PlayerStepEvent(player, stepCount, Vec.fromPoint(block.getTargetPos().pos()), true));
     }
 
     private void onDisconnect(PlayerDisconnectEvent e) {

@@ -20,6 +20,9 @@ public class Test {
             BungeeCordProxy.enable();
         }
 
+        MinecraftServer.getConnectionManager().setUuidProvider((playerConnection, username) ->
+                UUID.nameUUIDFromBytes(username.getBytes()));
+
         Map<UUID, Integer> scores = new HashMap<>();
 
         // give every permission to every player

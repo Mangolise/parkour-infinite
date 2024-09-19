@@ -1,65 +1,39 @@
 package net.mangolise.parkourinfinite;
 
-import net.minestom.server.MinecraftServer;
+import net.mangolise.gamesdk.entity.CollidableDisplayBlock;
+import net.minestom.server.collision.BoundingBox;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
-import net.minestom.server.coordinate.Vec;
-import net.minestom.server.entity.Entity;
-import net.minestom.server.entity.EntityType;
-import net.minestom.server.entity.LivingEntity;
-import net.minestom.server.entity.metadata.display.BlockDisplayMeta;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.block.Block;
-import net.minestom.server.timer.TaskSchedule;
+import org.jetbrains.annotations.Nullable;
 
-public class EntityBlock extends Entity {
-    private final Entity shulkerVehicle;
-    private final LivingEntity shulker;
-    private final Vec targetPos;
+import java.util.Collection;
+
+public class EntityBlock extends CollidableDisplayBlock {
+    private final BlockPosition targetPos;
     private final float placeRotation;
+    private final double blockHeight;
 
     private boolean steppedOn = false;
 
-    public EntityBlock(Instance instance, Block block, Point fromPos, Point targetPos, float placeRotation) {
-        super(EntityType.BLOCK_DISPLAY);
-        this.targetPos = Vec.fromPoint(targetPos);
+    public EntityBlock(Instance instance, Block block, Point fromPos, BlockPosition targetPos, float placeRotation, @Nullable Collection<BoundingBox> customCollision) {
+        super(instance, block, fromPos, 5, customCollision);
+        this.targetPos = targetPos;
         this.placeRotation = placeRotation;
 
-        editEntityMeta(BlockDisplayMeta.class, meta -> {
-            meta.setBlockState(block);
-            meta.setHasNoGravity(true);
-        });
+        if (customCollision == null) {
+            blockHeight = block.registry().collisionShape().relativeEnd().y();
+        } else {
+            double blockHeight = Double.MIN_VALUE;
+            for (BoundingBox boundingBox : customCollision) {
+                blockHeight = Math.max(boundingBox.maxY(), blockHeight);
+            }
 
-        setInstance(instance);
-        teleport(Pos.fromPoint(fromPos));
+            this.blockHeight = blockHeight;
+        }
 
-        shulkerVehicle = new Entity(EntityType.BLOCK_DISPLAY);
-        shulkerVehicle.editEntityMeta(BlockDisplayMeta.class, meta -> {
-            meta.setBlockState(Block.AIR);
-            meta.setInvisible(true);
-            meta.setHasNoGravity(true);
-        });
-
-        shulker = new LivingEntity(EntityType.SHULKER);
-        shulker.setInvisible(true);
-
-        // create hitbox after move is finished
-        MinecraftServer.getSchedulerManager().scheduleTask(() -> {
-            shulkerVehicle.setInstance(instance);
-            shulker.setInstance(instance);
-            shulkerVehicle.addPassenger(shulker);
-
-            shulkerVehicle.teleport(getPosition().add(0.5, 0.0, 0.5));
-            return TaskSchedule.stop();
-        }, TaskSchedule.tick(8));
-
-        MinecraftServer.getSchedulerManager().scheduleNextTick(() -> {
-            editEntityMeta(BlockDisplayMeta.class, meta -> {
-                meta.setTransformationInterpolationDuration(5);
-                meta.setPosRotInterpolationDuration(5);
-            });
-            teleport(Pos.fromPoint(targetPos));
-        });
+        teleport(Pos.fromPoint(targetPos.pos().sub(0, blockHeight, 0)));
     }
 
     public boolean wasSteppedOn() {
@@ -70,11 +44,15 @@ public class EntityBlock extends Entity {
         this.steppedOn = steppedOn;
     }
 
-    public Vec getTargetPos() {
+    public BlockPosition getTargetPos() {
         return targetPos;
     }
 
     public float getPlaceRotation() {
         return placeRotation;
+    }
+
+    public double getBlockHeight() {
+        return blockHeight;
     }
 }
