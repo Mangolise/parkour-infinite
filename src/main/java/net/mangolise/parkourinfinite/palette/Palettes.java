@@ -49,4 +49,55 @@ public final class Palettes {
 
         return ORES;
     }
+
+    private static WeighedPalette OVERWORLD = null;
+    public static WeighedPalette overworld() {
+        if (OVERWORLD != null) {
+            return OVERWORLD;
+        }
+
+        OVERWORLD = WeighedPalette.createFromObjects(
+                List.of( // large
+                    Block.GRASS_BLOCK, -1, 10f,
+                    Block.DIRT, -1, 8f,
+                    Block.OAK_LEAVES, -1, 4f,
+                    Block.OAK_LOG, -1, 3f,
+                    Block.STRIPPED_OAK_LOG, -1, 2.5f,
+                    Block.OAK_PLANKS, -1, 3f
+                ),
+                List.of( // medium
+                    Block.OAK_FENCE, NOT_TALL_WALL, 3f,
+                    Block.SPRUCE_FENCE, NOT_TALL_WALL, 2f,
+                    Block.MUD_BRICK_WALL, NOT_TALL_WALL, 1f
+                ),
+                List.of( // small
+                    Block.BROWN_STAINED_GLASS_PANE, -1, 1f,
+                    Block.GREEN_STAINED_GLASS_PANE, -1, 1f
+                )
+        );
+
+        return OVERWORLD;
+    }
+
+    private static WeighedPalette TEST = null;
+    public static WeighedPalette test() {
+        if (TEST != null) {
+            return TEST;
+        }
+
+        TEST = WeighedPalette.createFromObjects(
+                List.of( // large
+                        Block.GRAY_CARPET, -1, 1f,
+                        Block.CAULDRON, -1, 1f
+                ),
+                List.of( // medium
+                        Block.CANDLE_CAKE, -1, 1f
+                ),
+                List.of( // small
+                        Block.ORANGE_CANDLE, -1, 1f
+                )
+        );
+
+        return TEST;
+    }
 }
