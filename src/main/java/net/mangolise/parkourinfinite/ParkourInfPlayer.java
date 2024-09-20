@@ -26,8 +26,6 @@ import net.minestom.server.instance.block.Block;
 import net.minestom.server.inventory.PlayerInventory;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
-import net.minestom.server.network.packet.server.play.ParticlePacket;
-import net.minestom.server.particle.Particle;
 import net.minestom.server.sound.SoundEvent;
 import net.minestom.server.tag.Tag;
 import net.minestom.server.timer.TaskSchedule;
@@ -191,8 +189,7 @@ public class ParkourInfPlayer {
                     continue;
                 }
 
-//                if (GameSdkUtils.collidesWithBoundingBox(box, newPos, block.getPosition().add(0, 1, 0))) {
-                if (isInBlock(newPos, player.getBoundingBox(), block.getTargetPos().pos(), block.getCollision())) {
+                if (isInBlock(newPos, box, block.getTargetPos().pos(), block.getCollision())) {
                     steppedPos = blocks.getFirst().getTargetPos();
                     newBlocks.add(addBlock(steppedPos));
                     block.setSteppedOn(true);
@@ -237,11 +234,6 @@ public class ParkourInfPlayer {
                 box2End.z() > box1Start.z() && box2Start.z() < box1End.z();
     }
 
-    private void packetPos(Point pos) {
-        ParticlePacket packet = new ParticlePacket(Particle.DUST, pos.x(), pos.y(), pos.z(), 0, 0, 0, 0, 1);
-        player.sendPacket(packet);
-    }
-
     private BlockPosition getNextPosition(BlockPosition previousPos) {
         // generate block type
         long blockRand = random.nextLong();
@@ -251,10 +243,10 @@ public class ParkourInfPlayer {
 
         final float[] DISTANCE_MODIFIERS = new float[] {0.3f, -0.1f, -0.2f};
 
-        if (blockType < 154) { // ~60% chance
+        if (blockType < 180) { // ~70% chance
             distanceAdditional = 4.0f + DISTANCE_MODIFIERS[0];
             blockType = 0;
-        } else if (blockType < 230) { // ~30% chance
+        } else if (blockType < 230) { // ~20% chance
             distanceAdditional = 4.0f + DISTANCE_MODIFIERS[1];
             blockType = 1;
         } else { // ~10% chance
@@ -309,9 +301,9 @@ public class ParkourInfPlayer {
         jumpDeathCount = 0;
 
         BlockBox block;
-        if (position.blockType() == 0) { // ~60% chance
+        if (position.blockType() == 0) {
             block = palette.getLargeBlock(position.passRandom());
-        } else if (position.blockType() == 1) { // ~30% chance
+        } else if (position.blockType() == 1) {
             block = palette.getMediumBlock(position.passRandom());
         } else { // ~10% chance
             block = palette.getSmallBlock(position.passRandom());
