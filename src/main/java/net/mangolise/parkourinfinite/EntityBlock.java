@@ -4,6 +4,7 @@ import net.mangolise.gamesdk.entity.CollidableDisplayBlock;
 import net.minestom.server.collision.BoundingBox;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
+import net.minestom.server.coordinate.Vec;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.block.Block;
 import org.jetbrains.annotations.Nullable;
@@ -18,7 +19,7 @@ public class EntityBlock extends CollidableDisplayBlock {
     private boolean steppedOn = false;
 
     public EntityBlock(Instance instance, Block block, Point fromPos, BlockPosition targetPos, float placeRotation, @Nullable Collection<BoundingBox> customCollision) {
-        super(instance, block, fromPos, 5, customCollision);
+        super(instance, block, fromPos, 5, Vec.ONE, customCollision, 1);
         this.targetPos = targetPos;
         this.placeRotation = placeRotation;
 
