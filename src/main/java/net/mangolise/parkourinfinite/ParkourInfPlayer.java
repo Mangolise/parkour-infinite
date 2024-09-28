@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.mangolise.gamesdk.log.Log;
+import net.mangolise.gamesdk.menu.TimeSwitcherMenu;
 import net.mangolise.parkourinfinite.palette.BlockBox;
 import net.mangolise.parkourinfinite.palette.Palette;
 import net.mangolise.parkourinfinite.palette.Palettes;
@@ -17,9 +18,11 @@ import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.EventNode;
+import net.minestom.server.event.item.ItemDropEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.event.player.PlayerEatEvent;
 import net.minestom.server.event.player.PlayerMoveEvent;
+import net.minestom.server.event.player.PlayerUseItemEvent;
 import net.minestom.server.event.trait.EntityEvent;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.block.Block;
@@ -50,7 +53,6 @@ public class ParkourInfPlayer {
 
     private double spawnRotation = 0d;
     private int stepCount;
-    private double lowestBlockY = 30000d;
     private int jumpDeathCount = 0;
 
     private Palette palette = Palettes.ores();
@@ -99,6 +101,10 @@ public class ParkourInfPlayer {
             blocks.addFirst(addBlock(blocks.getFirst().getTargetPos()));
         }
 
+        player.getInventory().setItemStack(8, ItemStack.builder(Material.CLOCK)
+                .customName(Component.text("Time Switcher").decoration(TextDecoration.ITALIC, false))
+                .build());
+
         // Re teleport the player to the spawn, so they don't fall off immediately
         MinecraftServer.getSchedulerManager().scheduleTask(() -> {
             player.teleport(spawnPos);
@@ -109,6 +115,8 @@ public class ParkourInfPlayer {
         events.addListener(PlayerMoveEvent.class, this::onMove);
         events.addListener(PlayerDisconnectEvent.class, this::onDisconnect);
         events.addListener(PlayerEatEvent.class, this::onEat);
+        events.addListener(PlayerUseItemEvent.class, this::onItemUse);
+        events.addListener(ItemDropEvent.class, e -> e.setCancelled(true));
 
         MinecraftServer.getSchedulerManager().scheduleTask(() -> {
             updateActionBar();
@@ -147,7 +155,7 @@ public class ParkourInfPlayer {
         }
 
         // Void death
-        if (newPos.y() < lowestBlockY - 6d) {
+        if (newPos.y() < blocks.getFirst().getTargetPos().pos().y() - 6d) {
             EntityBlock previous = null;
             for (EntityBlock block : blocks) {
                 if (block.wasSteppedOn()) {
@@ -278,11 +286,6 @@ public class ParkourInfPlayer {
 
         Point position = previousPos.pos().add(offset);
 
-        // update lowest block position and reset jumpDeathCount
-        if (position.y() < lowestBlockY) {
-            lowestBlockY = position.y();
-        }
-
         return new BlockPosition(position, blockType, passRandom);
     }
 
@@ -343,6 +346,12 @@ public class ParkourInfPlayer {
         player.playSound(Sound.sound(SoundEvent.BLOCK_ANVIL_LAND, Sound.Source.PLAYER, 0.4f, 0.5f));
 
         EventDispatcher.call(new PlayerStepEvent(player, stepCount, Vec.fromPoint(block.getTargetPos().pos()), true));
+    }
+
+    private void onItemUse(PlayerUseItemEvent e) {
+        if (Material.CLOCK.equals(e.getItemStack().material())) {
+            player.openInventory(TimeSwitcherMenu.MENU.getInventory());
+        }
     }
 
     private void onDisconnect(PlayerDisconnectEvent e) {

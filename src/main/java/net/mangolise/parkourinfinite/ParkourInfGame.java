@@ -24,13 +24,15 @@ public class ParkourInfGame extends BaseGame<ParkourInfGame.Config> {
     public void setup() {
         super.setup();
 
-        DimensionType dimension = DimensionType.builder().ambientLight(15).fixedTime(1800L).build();
-        DynamicRegistry.Key<DimensionType> dim = MinecraftServer.getDimensionTypeRegistry().register("normal", dimension);
+        DimensionType dimension = DimensionType.builder().ambientLight(15).build();
+        DynamicRegistry.Key<DimensionType> dim = MinecraftServer.getDimensionTypeRegistry().register("parkour-infinite", dimension);
 
         // Player spawning
         GlobalEventHandler events = MinecraftServer.getGlobalEventHandler();
         events.addListener(AsyncPlayerConfigurationEvent.class, e -> {
             Instance instance = MinecraftServer.getInstanceManager().createInstanceContainer(dim, null);
+            instance.setTimeRate(0);
+            instance.setTimeSynchronizationTicks(0);
             e.setSpawningInstance(instance);
 
             e.getPlayer().setGameMode(GameMode.ADVENTURE);
