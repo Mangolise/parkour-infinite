@@ -51,6 +51,7 @@ public class ParkourInfPlayer {
     private final Deque<Long> stepTimes;
     private final Random random;
 
+    private EntityBlock lastNextBlock = null;
     private double spawnRotation = 0d;
     private int stepCount;
     private int jumpDeathCount = 0;
@@ -180,12 +181,15 @@ public class ParkourInfPlayer {
         List<EntityBlock> newBlocks = new ArrayList<>();
         boolean stepped = false;
         BlockPosition steppedPos = null;
+        EntityBlock nextBlock = null;
 
         synchronized (blocks) {
             for (EntityBlock block : blocks) {
                 if (block.wasSteppedOn()) {
                     break;
                 }
+
+                nextBlock = block;
 
                 // when you step on a block, go through every block before it that hasn't been stepped on and
                 // add do the step logic for it
@@ -217,6 +221,15 @@ public class ParkourInfPlayer {
                 }
 
                 EventDispatcher.call(new PlayerStepEvent(player, stepCount, Vec.fromPoint(steppedPos.pos()), false));
+            }
+
+            if (nextBlock != null) {
+                if (lastNextBlock != null) {
+                    lastNextBlock.setGlowing(false);
+                }
+
+                nextBlock.setGlowing(true);
+                lastNextBlock = nextBlock;
             }
         }
     }
