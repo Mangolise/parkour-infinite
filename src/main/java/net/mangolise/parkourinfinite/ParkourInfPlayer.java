@@ -71,7 +71,7 @@ public class ParkourInfPlayer {
         // Create blocks player has already stepped on
         BlockPosition prevPosition = new BlockPosition(START_POSITION, 0, 0);
         if (stepCount <= LOAD_PLACE_AMOUNT) {
-            EntityBlock initialBlock = new EntityBlock(instance, Block.STONE, START_POSITION, prevPosition, 0, null);
+            EntityBlock initialBlock = EntityBlock.createBlock(instance, Block.STONE, START_POSITION, prevPosition, 0, null);
             initialBlock.setSteppedOn(stepCount != 0);
             blocks.add(initialBlock);
         }
@@ -325,7 +325,7 @@ public class ParkourInfPlayer {
             block = palette.getSmallBlock(position.passRandom());
         }
 
-        return new EntityBlock(instance, block.block(), previousPos, position, (float) spawnRotation, block.customShape());
+        return EntityBlock.createBlock(instance, block.block(), previousPos, position, (float) spawnRotation, block.customShape());
     }
 
     private EntityBlock addBlock(BlockPosition previousPos) {

@@ -14,25 +14,27 @@ import java.util.Collection;
 public class EntityBlock extends CollidableDisplayBlock {
     private final BlockPosition targetPos;
     private final float placeRotation;
-    private final double blockHeight;
 
     private boolean steppedOn = false;
 
-    public EntityBlock(Instance instance, Block block, Point fromPos, BlockPosition targetPos, float placeRotation, @Nullable Collection<BoundingBox> customCollision) {
-        super(instance, block, fromPos, 5, Vec.ONE, customCollision, 1);
-        this.targetPos = targetPos;
-        this.placeRotation = placeRotation;
-
+    public static EntityBlock createBlock(Instance instance, Block block, Point fromPos, BlockPosition targetPos, float placeRotation, @Nullable Collection<BoundingBox> customCollision) {
+        double blockHeight;
         if (customCollision == null) {
             blockHeight = block.registry().collisionShape().relativeEnd().y();
         } else {
-            double blockHeight = Double.MIN_VALUE;
+            blockHeight = Double.MIN_VALUE;
             for (BoundingBox boundingBox : customCollision) {
                 blockHeight = Math.max(boundingBox.maxY(), blockHeight);
             }
-
-            this.blockHeight = blockHeight;
         }
+
+        return new EntityBlock(instance, block, fromPos.sub(0, blockHeight, 0), targetPos, blockHeight, placeRotation, customCollision);
+    }
+
+    private EntityBlock(Instance instance, Block block, Point fromPos, BlockPosition targetPos, double blockHeight, float placeRotation, @Nullable Collection<BoundingBox> customCollision) {
+        super(instance, block, fromPos, 5, Vec.ONE, customCollision, 1);
+        this.targetPos = targetPos;
+        this.placeRotation = placeRotation;
 
         teleport(Pos.fromPoint(targetPos.pos().sub(0, blockHeight, 0)));
     }
@@ -51,9 +53,5 @@ public class EntityBlock extends CollidableDisplayBlock {
 
     public float getPlaceRotation() {
         return placeRotation;
-    }
-
-    public double getBlockHeight() {
-        return blockHeight;
     }
 }
