@@ -11,6 +11,7 @@ import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.event.player.PlayerSpawnEvent;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.registry.DynamicRegistry;
+import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.world.DimensionType;
 
 import java.util.List;
@@ -24,13 +25,10 @@ public class ParkourInfGame extends BaseGame<ParkourInfGame.Config> {
     public void setup() {
         super.setup();
 
-        DimensionType dimension = DimensionType.builder().ambientLight(15).build();
-        DynamicRegistry.Key<DimensionType> dim = MinecraftServer.getDimensionTypeRegistry().register("parkour-infinite", dimension);
-
         // Player spawning
         GlobalEventHandler events = MinecraftServer.getGlobalEventHandler();
         events.addListener(AsyncPlayerConfigurationEvent.class, e -> {
-            Instance instance = MinecraftServer.getInstanceManager().createInstanceContainer(dim, null);
+            Instance instance = MinecraftServer.getInstanceManager().createInstanceContainer();
             instance.setTimeRate(0);
             instance.setTimeSynchronizationTicks(0);
             e.setSpawningInstance(instance);
