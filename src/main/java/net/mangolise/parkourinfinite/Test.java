@@ -34,8 +34,6 @@ public class Test {
             scores.put(e.getPlayer().getUuid(), e.getStepCount());
         });
 
-        server.start("0.0.0.0", GameSdkUtils.getConfiguredPort());
-
         ParkourInfGame.Config config = new ParkourInfGame.Config(player -> {
             UUID uuid = player.getUuid();
             long seed = uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits();
@@ -43,5 +41,6 @@ public class Test {
         });
         ParkourInfGame game = new ParkourInfGame(config);
         game.setup();
+        server.start("0.0.0.0", GameSdkUtils.getConfiguredPort());
     }
 }
