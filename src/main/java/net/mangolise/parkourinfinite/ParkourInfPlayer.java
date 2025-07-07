@@ -19,9 +19,10 @@ import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.EventNode;
 import net.minestom.server.event.item.ItemDropEvent;
+import net.minestom.server.event.item.PlayerFinishItemUseEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
-import net.minestom.server.event.player.PlayerEatEvent;
 import net.minestom.server.event.player.PlayerMoveEvent;
+import net.minestom.server.event.player.PlayerPreEatEvent;
 import net.minestom.server.event.player.PlayerUseItemEvent;
 import net.minestom.server.event.trait.EntityEvent;
 import net.minestom.server.instance.Instance;
@@ -115,7 +116,7 @@ public class ParkourInfPlayer {
         EventNode<EntityEvent> events = player.eventNode();
         events.addListener(PlayerMoveEvent.class, this::onMove);
         events.addListener(PlayerDisconnectEvent.class, this::onDisconnect);
-        events.addListener(PlayerEatEvent.class, this::onEat);
+        events.addListener(PlayerFinishItemUseEvent.class, this::onEat);
         events.addListener(PlayerUseItemEvent.class, this::onItemUse);
         events.addListener(ItemDropEvent.class, e -> e.setCancelled(true));
 
@@ -333,7 +334,7 @@ public class ParkourInfPlayer {
         return createBlock(previousPos.pos(), position);
     }
 
-    private void onEat(PlayerEatEvent e) {
+    private void onEat(PlayerFinishItemUseEvent e) {
         // failsafe
         EntityBlock block = null;
 
