@@ -14,13 +14,21 @@ public class PaletteMenu extends InventoryMenu {
     public static final PaletteMenu MENU = new PaletteMenu();
 
     public PaletteMenu() {
-        super(InventoryType.CHEST_1_ROW, Component.text("Choose a Palette").color(TextColor.color(0x119677)));
+        super(InventoryType.CHEST_2_ROW, Component.text("Choose a Palette").color(TextColor.color(0x119677)));
 
         List<Palette> palettes = Palettes.allPalettes();
         for (int i = 0; i < palettes.size(); i++) {
             Palette palette = palettes.get(i);
+            int slot = i;
+            if (i >= 9) {
+                slot += 2;
+            }
 
-            setMenuItem(i + 9 / 2 - palettes.size() / 2, palette.getIcon()).onLeftClick(e -> {
+            if (slot >= 13) {
+                slot++;
+            }
+
+            setMenuItem(slot, palette.getIcon()).onLeftClick(e -> {
                 e.player().getTag(ParkourInfPlayer.PLAYER_INF_TAG).setPalette(palette);
                 e.player().closeInventory();
             });
