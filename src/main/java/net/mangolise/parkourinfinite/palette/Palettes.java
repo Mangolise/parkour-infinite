@@ -3,12 +3,22 @@ package net.mangolise.parkourinfinite.palette;
 import net.minestom.server.collision.BoundingBox;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.instance.block.Block;
+import net.minestom.server.item.ItemStack;
+import net.minestom.server.item.Material;
 
 import java.util.Collection;
 import java.util.List;
 
 public final class Palettes {
     public static Collection<BoundingBox> NOT_TALL_WALL = List.of(new BoundingBox(0.5, 1.0, 0.5, new Vec(0.25, 0.0, 0.25)));
+
+    public static List<Palette> allPalettes() {
+        return List.of(
+                ores(),
+                overworld(),
+                everything()
+        );
+    }
 
     private static WeighedPalette ORES = null;
     public static WeighedPalette ores() {
@@ -17,6 +27,7 @@ public final class Palettes {
         }
 
         ORES = WeighedPalette.createFromObjects(
+            ItemStack.of(Material.IRON_ORE),
             List.of( // large
                 Block.STONE, -1, 10f,
                 Block.DEEPSLATE, -1, 8f,
@@ -57,6 +68,7 @@ public final class Palettes {
         }
 
         OVERWORLD = WeighedPalette.createFromObjects(
+                ItemStack.of(Material.GRASS_BLOCK),
                 List.of( // large
                     Block.GRASS_BLOCK, -1, 10f,
                     Block.DIRT, -1, 8f,
@@ -86,6 +98,7 @@ public final class Palettes {
         }
 
         TEST = WeighedPalette.createFromObjects(
+                ItemStack.of(Material.BEDROCK),
                 List.of( // large
                         Block.GRAY_CARPET, -1, 1f,
                         Block.CAULDRON, -1, 1f
@@ -99,5 +112,15 @@ public final class Palettes {
         );
 
         return TEST;
+    }
+
+    private static EveryBlockPalette EVERYTHING = null;
+    public static EveryBlockPalette everything() {
+        if (EVERYTHING != null) {
+            return EVERYTHING;
+        }
+
+        EVERYTHING = new EveryBlockPalette(ItemStack.of(Material.WAXED_WEATHERED_CUT_COPPER_STAIRS));
+        return EVERYTHING;
     }
 }

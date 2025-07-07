@@ -3,6 +3,7 @@ package net.mangolise.parkourinfinite.palette;
 import net.mangolise.gamesdk.log.Log;
 import net.minestom.server.collision.BoundingBox;
 import net.minestom.server.instance.block.Block;
+import net.minestom.server.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +18,10 @@ public class WeighedPalette implements Palette {
     private final List<WeightedBlockBox> mediumBlocks;
     private final List<WeightedBlockBox> smallBlocks;
 
-    public WeighedPalette(List<WeightedBlockBox> largeBlocks, List<WeightedBlockBox> mediumBlocks, List<WeightedBlockBox> smallBlocks) {
+    private final ItemStack icon;
+
+    public WeighedPalette(ItemStack icon, List<WeightedBlockBox> largeBlocks, List<WeightedBlockBox> mediumBlocks, List<WeightedBlockBox> smallBlocks) {
+        this.icon = icon;
         this.largeBlocks = largeBlocks;
         this.mediumBlocks = mediumBlocks;
         this.smallBlocks = smallBlocks;
@@ -27,8 +31,9 @@ public class WeighedPalette implements Palette {
         smallBlocksTotal = getTotalWeight(smallBlocks);
     }
 
-    public static WeighedPalette createFromObjects(List<Object> largeBuilder, List<Object> mediumBuilder, List<Object> smallBuilder) {
+    public static WeighedPalette createFromObjects(ItemStack icon, List<Object> largeBuilder, List<Object> mediumBuilder, List<Object> smallBuilder) {
         return new WeighedPalette(
+            icon,
             buildBlocksFromBuilder(largeBuilder),
             buildBlocksFromBuilder(mediumBuilder),
             buildBlocksFromBuilder(smallBuilder)
@@ -102,6 +107,11 @@ public class WeighedPalette implements Palette {
     @Override
     public BlockBox getSmallBlock(long random) {
         return getRandomBlock(smallBlocks, smallBlocksTotal, random);
+    }
+
+    @Override
+    public ItemStack getIcon() {
+        return icon;
     }
 
     public record WeightedBlockBox(BlockBox blockBox, float weight) {}

@@ -2,6 +2,7 @@ package net.mangolise.parkourinfinite.palette;
 
 import net.minestom.server.collision.ShapeImpl;
 import net.minestom.server.instance.block.Block;
+import net.minestom.server.item.ItemStack;
 import net.minestom.server.registry.StaticProtocolObject;
 
 import java.util.Comparator;
@@ -9,6 +10,7 @@ import java.util.Comparator;
 public class EveryBlockPalette implements Palette {
     private static final Block[] blocks;
     private int index;
+    private final ItemStack icon;
 
     static {
         blocks = Block.values().stream()
@@ -16,8 +18,9 @@ public class EveryBlockPalette implements Palette {
                 .sorted(Comparator.comparing(StaticProtocolObject::name)).toArray(Block[]::new);
     }
 
-    public EveryBlockPalette() {
+    public EveryBlockPalette(ItemStack icon) {
         index = -1;
+        this.icon = icon;
     }
 
     @Override
@@ -38,5 +41,10 @@ public class EveryBlockPalette implements Palette {
     @Override
     public BlockBox getSmallBlock(long random) {
         return getLargeBlock(random);
+    }
+
+    @Override
+    public ItemStack getIcon() {
+        return icon;
     }
 }

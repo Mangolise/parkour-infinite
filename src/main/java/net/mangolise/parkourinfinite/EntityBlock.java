@@ -17,16 +17,21 @@ public class EntityBlock extends CollidableDisplayBlock {
 
     private boolean steppedOn = false;
 
-    public static EntityBlock createBlock(Instance instance, Block block, Point fromPos, BlockPosition targetPos, float placeRotation, @Nullable Collection<BoundingBox> customCollision) {
-        double blockHeight;
+    public static double getBlockHeight(Block block, @Nullable Collection<BoundingBox> customCollision) {
         if (customCollision == null) {
-            blockHeight = block.registry().collisionShape().relativeEnd().y();
-        } else {
-            blockHeight = Double.MIN_VALUE;
-            for (BoundingBox boundingBox : customCollision) {
-                blockHeight = Math.max(boundingBox.maxY(), blockHeight);
-            }
+            return block.registry().collisionShape().relativeEnd().y();
         }
+
+        double blockHeight = Double.MIN_VALUE;
+        for (BoundingBox boundingBox : customCollision) {
+            blockHeight = Math.max(boundingBox.maxY(), blockHeight);
+        }
+
+        return blockHeight;
+    }
+
+    public static EntityBlock createBlock(Instance instance, Block block, Point fromPos, BlockPosition targetPos, float placeRotation, @Nullable Collection<BoundingBox> customCollision) {
+        double blockHeight = getBlockHeight(block, customCollision);
 
         return new EntityBlock(instance, block, fromPos.sub(0, blockHeight, 0), targetPos, blockHeight, placeRotation, customCollision);
     }

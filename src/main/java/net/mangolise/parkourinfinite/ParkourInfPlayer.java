@@ -7,6 +7,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.mangolise.gamesdk.log.Log;
 import net.mangolise.gamesdk.menu.TimeSwitcherMenu;
+import net.mangolise.parkourinfinite.menu.PaletteMenu;
 import net.mangolise.parkourinfinite.palette.BlockBox;
 import net.mangolise.parkourinfinite.palette.Palette;
 import net.mangolise.parkourinfinite.palette.Palettes;
@@ -22,7 +23,6 @@ import net.minestom.server.event.item.ItemDropEvent;
 import net.minestom.server.event.item.PlayerFinishItemUseEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.event.player.PlayerMoveEvent;
-import net.minestom.server.event.player.PlayerPreEatEvent;
 import net.minestom.server.event.player.PlayerUseItemEvent;
 import net.minestom.server.event.trait.EntityEvent;
 import net.minestom.server.instance.Instance;
@@ -105,6 +105,10 @@ public class ParkourInfPlayer {
 
         player.getInventory().setItemStack(8, ItemStack.builder(Material.CLOCK)
                 .customName(Component.text("Time Switcher").decoration(TextDecoration.ITALIC, false))
+                .build());
+
+        player.getInventory().setItemStack(7, ItemStack.builder(Material.OAK_LEAVES)
+                .customName(Component.text("Palette Switcher").decoration(TextDecoration.ITALIC, false))
                 .build());
 
         // Re teleport the player to the spawn, so they don't fall off immediately
@@ -317,16 +321,19 @@ public class ParkourInfPlayer {
 
         jumpDeathCount = 0;
 
-        BlockBox block;
-        if (position.blockType() == 0) {
-            block = palette.getLargeBlock(position.passRandom());
-        } else if (position.blockType() == 1) {
-            block = palette.getMediumBlock(position.passRandom());
-        } else { // ~10% chance
-            block = palette.getSmallBlock(position.passRandom());
-        }
+        BlockBox block = getBlockBox(position);
 
         return EntityBlock.createBlock(instance, block.block(), previousPos, position, (float) spawnRotation, block.customShape());
+    }
+
+    private BlockBox getBlockBox(BlockPosition position) {
+        if (position.blockType() == 0) {
+            return palette.getLargeBlock(position.passRandom());
+        } else if (position.blockType() == 1) {
+            return palette.getMediumBlock(position.passRandom());
+        } else { // ~10% chance
+            return palette.getSmallBlock(position.passRandom());
+        }
     }
 
     private EntityBlock addBlock(BlockPosition previousPos) {
@@ -365,6 +372,8 @@ public class ParkourInfPlayer {
     private void onItemUse(PlayerUseItemEvent e) {
         if (Material.CLOCK.equals(e.getItemStack().material())) {
             player.openInventory(TimeSwitcherMenu.MENU.getInventory());
+        } else if (Material.OAK_LEAVES.equals(e.getItemStack().material())) {
+            player.openInventory(PaletteMenu.MENU.getInventory());
         }
     }
 
@@ -372,5 +381,20 @@ public class ParkourInfPlayer {
         MinecraftServer.getSchedulerManager().scheduleNextTick(() -> {
             MinecraftServer.getInstanceManager().unregisterInstance(instance);
         });
+    }
+
+    public void setPalette(Palette palette) {
+        if (palette == this.palette) {
+            return;
+        }
+
+        this.palette = palette;
+
+        for (EntityBlock block : blocks) {
+            BlockBox box = getBlockBox(block.getTargetPos());
+            block.rebuild(box.block(), box.customShape(), block.getScale(), block.getMinimumPlayerScale());
+        }
+
+        player.teleport(player.getPosition().add(0d, 0.5, 0d));
     }
 }

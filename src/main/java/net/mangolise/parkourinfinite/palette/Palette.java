@@ -1,5 +1,7 @@
 package net.mangolise.parkourinfinite.palette;
 
+import net.minestom.server.item.ItemStack;
+
 public interface Palette {
     /**
      * Gets a random block with a top size of 75% or larger (12px/16px-16px/16px)
@@ -27,4 +29,6 @@ public interface Palette {
      * @return the block
      */
     BlockBox getSmallBlock(long random);
+
+    ItemStack getIcon();
 }
