@@ -41,7 +41,8 @@ public class EntityBlock extends CollidableDisplayBlock {
         this.targetPos = targetPos;
         this.placeRotation = placeRotation;
 
-        teleport(Pos.fromPoint(targetPos.pos().sub(0, blockHeight, 0)));
+        Pos teleportPos = Pos.fromPoint(targetPos.pos().sub(0, blockHeight, 0));
+        instance.loadChunk(teleportPos).thenAccept(chunk -> teleport(teleportPos));
     }
 
     public boolean wasSteppedOn() {
